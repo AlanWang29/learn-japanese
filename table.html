@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>五十音練習帳</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+        body {
+            font-family: "Hiragino Sans", "Meiryo", "Noto Sans JP", sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+        h1 {
+            text-align: center;
+            color: #d86b85;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        .section {
+            width: 48%;
+        }
+        .section-title {
+            text-align: center;
+            padding: 4px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .平假名 .section-title {
+            background-color: #fce4ec;
+            color: #c2185b;
+        }
+        .片假名 .section-title {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        tr {
+            height: 28px;
+        }
+        td {
+            border: 1px solid #e0e0e0;
+            text-align: center;
+            vertical-align: middle;
+            position: relative;
+        }
+        .平假名 td { border-color: #f8bbd0; }
+        .片假名 td { border-color: #bbdefb; }
+
+        /* 假名提示欄 */
+        td.first-col {
+            border-width: 2px;
+            background-color: #fff;
+        }
+        .平假名 td.first-col { border-color: #f48fb1; }
+        .片假名 td.first-col { border-color: #90caf9; }
+
+        .kana {
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .romaji {
+            font-size: 9px;
+            color: #e91e63;
+            display: block;
+        }
+        .片假名 .romaji { color: #1e88e5; }
+
+        /* 米字線/虛線效果 */
+        td.grid-box::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            border-top: 1px dashed #f48fb1;
+            z-index: 1;
+        }
+        .片假名 td.grid-box::before {
+            border-top-color: #90caf9;
+        }
+        td.grid-box::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            border-left: 1px dashed #f48fb1;
+            z-index: 1;
+        }
+        .片假名 td.grid-box::after {
+            border-left-color: #90caf9;
+        }
+
+        /* 分頁 */
+        .page {
+            page-break-after: always;
+        }
+        .page:last-child {
+            page-break-after: auto;
+        }
+        .page-label {
+            text-align: center;
+            color: #bbb;
+            font-size: 11px;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+    const hira = [
+        ['あ','a'],['い','i'],['う','u'],['え','e'],['お','o'],
+        ['か','ka'],['き','ki'],['く','ku'],['け','ke'],['こ','ko'],
+        ['さ','sa'],['し','shi'],['す','su'],['せ','se'],['そ','so'],
+        ['た','ta'],['ち','chi'],['つ','tsu'],['て','te'],['と','to'],
+        ['な','na'],['に','ni'],['ぬ','nu'],['ね','ne'],['の','no'],
+        ['は','ha'],['ひ','hi'],['ふ','fu'],['へ','he'],['ほ','ho'],
+        ['ま','ma'],['み','mi'],['む','mu'],['め','me'],['も','mo'],
+        ['や','ya'],['ゆ','yu'],['よ','yo'],
+        ['ら','ra'],['り','ri'],['る','ru'],['れ','re'],['ろ','ro'],
+        ['わ','wa'],['を','wo'],['ん','n']
+    ];
+    const kata = [
+        ['ア','a'],['イ','i'],['ウ','u'],['エ','e'],['オ','o'],
+        ['カ','ka'],['キ','ki'],['ク','ku'],['ケ','ke'],['コ','ko'],
+        ['サ','sa'],['シ','shi'],['ス','su'],['セ','se'],['ソ','so'],
+        ['タ','ta'],['チ','chi'],['ツ','tsu'],['テ','te'],['ト','to'],
+        ['ナ','na'],['ニ','ni'],['ヌ','nu'],['ネ','ne'],['ノ','no'],
+        ['ハ','ha'],['ヒ','hi'],['フ','fu'],['ヘ','he'],['ホ','ho'],
+        ['マ','ma'],['ミ','mi'],['ム','mu'],['メ','me'],['モ','mo'],
+        ['ヤ','ya'],['ユ','yu'],['ヨ','yo'],
+        ['ラ','ra'],['リ','ri'],['ル','ru'],['レ','re'],['ロ','ro'],
+        ['ワ','wa'],['ヲ','wo'],['ン','n']
+    ];
+
+    const PER_PAGE = 25;
+    const totalPages = Math.ceil(hira.length / PER_PAGE);
+
+    function buildTable(rows) {
+        let html = '<table>';
+        rows.forEach(item => {
+            html += '<tr>';
+            html += `<td class="first-col"><span class="kana">${item[0]}</span><span class="romaji">${item[1]}</span></td>`;
+            for (let i = 0; i < 6; i++) {
+                html += '<td class="grid-box"></td>';
+            }
+            html += '</tr>';
+        });
+        return html + '</table>';
+    }
+
+    for (let p = 0; p < totalPages; p++) {
+        const start = p * PER_PAGE;
+        const end = start + PER_PAGE;
+        const hSlice = hira.slice(start, end);
+        const kSlice = kata.slice(start, end);
+        document.write('<div class="page">');
+        document.write('<h1>🌸 ひらがな・カタカナ 練習帳 🌸</h1>');
+        document.write('<div class="container">');
+        document.write('<div class="section 平假名"><div class="section-title">ひらがな（平假名）</div>' + buildTable(hSlice) + '</div>');
+        document.write('<div class="section 片假名"><div class="section-title">カタカナ（片假名）</div>' + buildTable(kSlice) + '</div>');
+        document.write('</div>');
+        document.write(`<div class="page-label">第 ${p + 1} / ${totalPages} 頁</div>`);
+        document.write('</div>');
+    }
+</script>
+
+</body>
+</html>
