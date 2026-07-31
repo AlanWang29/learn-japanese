@@ -136,6 +136,15 @@
             font-size: 11px;
             margin-top: 6px;
         }
+        .screen-foot {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            padding: 16px;
+        }
+        .screen-foot a { color: #1976d2; text-decoration: none; }
+        /* 列印時不顯示聯絡資訊，避免出現在練習帳上 */
+        @media print { .screen-foot { display: none; } }
     </style>
 </head>
 <body>
@@ -200,6 +209,10 @@
         document.write('</div>');
     }
 </script>
+
+<footer class="screen-foot">
+    聯絡 / Contact： <a href="mailto:[email removed]">[email removed]</a>
+</footer>
 
 </body>
 </html>

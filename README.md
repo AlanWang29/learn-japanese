@@ -51,6 +51,12 @@ A dependency-free, browser-only toolkit for learning the Japanese kana (hiragana
 - 純 HTML + CSS + 原生 JavaScript，無任何框架與外部相依。
 - 資料全部存在本機，不上傳任何內容。
 
+## 聯絡 / Contact
+
+有問題或建議歡迎來信 / Questions or suggestions are welcome：
+
+- Email： [email removed]
+
 ## 授權 / License
 
 MIT
