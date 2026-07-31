@@ -75,6 +75,8 @@ nav button.on { background: var(--panel-2); color: var(--fg); }
 #answer:focus { border-color: var(--accent); }
 #answer.ok { border-color: var(--ok); color: var(--ok); }
 #answer.bad { border-color: var(--bad); color: var(--bad); }
+/* 選擇題時 input 移出畫面：視覺消失、不佔位、不擋點擊，但仍可 focus 以喚起鍵盤 */
+#answer.offscreen { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; min-width: 0; max-width: none; margin: 0; padding: 0; opacity: 0; }
 
 .choices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
 .choice {
@@ -184,7 +186,11 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
         <div id="q-body"></div>
         <div class="prompt-hint" id="q-hint"></div>
       </div>
-      <div id="q-answer-area"></div>
+      <div id="q-answer-area">
+        <!-- input 常駐 DOM：選擇題時移出畫面但仍可 focus，才能在手勢中預先喚起鍵盤 -->
+        <input id="answer" class="offscreen" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="latin">
+        <div id="q-choices"></div>
+      </div>
       <div class="feedback" id="q-feedback"></div>
       <div class="meter">
         <span>本次 <b id="m-session">0 / 0</b></span>
@@ -587,7 +593,9 @@ function speak(text) {
    練習視圖
    ======================================================================= */
 function renderQuestion() {
-  const q = nextQuestion();
+  // 優先用上一輪預抽好的題目（讓手勢中能提前得知題型以喚鍵盤），否則現抽
+  const q = S.nextQ || nextQuestion();
+  S.nextQ = null;
   S.q = q;
   S.locked = false;
   S.canAdvance = false;
@@ -595,12 +603,16 @@ function renderQuestion() {
   $('#q-feedback').innerHTML = '';
   $('#q-feedback').onclick = null;
   $('#q-feedback').style.cursor = '';
+  $('#q-choices').innerHTML = '';
+
+  const input = $('#answer');
 
   if (!q) {
     $('#q-tag').style.display = 'none';
     $('#q-body').innerHTML = '<div style="font-size:16px;color:var(--dim);padding:30px 0">練習範圍是空的，請到「設定」至少勾選一行。</div>';
     $('#q-hint').textContent = '';
-    $('#q-answer-area').innerHTML = '';
+    input.classList.add('offscreen');
+    input.blur();
     return;
   }
 
@@ -627,29 +639,39 @@ function renderQuestion() {
     $('#q-tag').textContent = SCRIPT_LABEL[q.script];
     $('#q-body').innerHTML = '<div class="prompt-kana">' + glyph + '</div>';
     $('#q-hint').textContent = '輸入羅馬字';
-    // 重用同一個 input：手機上鍵盤才能全程保持彈出，不會每題被收起
-    let input = $('#answer');
-    if (!input) {
-      $('#q-answer-area').innerHTML = '<input id="answer" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="latin">';
-      input = $('#answer');
-      input.addEventListener('input', onType);
-    } else {
-      input.value = '';
-      input.classList.remove('ok', 'bad');
-    }
+    // 常駐 input：清空、露出、對焦。連續輸入題間鍵盤保持不收；
+    // 若剛才在選擇題手勢中已預先 focus，這裡再 focus 一次也只是維持鍵盤。
+    input.value = '';
+    input.classList.remove('ok', 'bad', 'offscreen');
     if (S.view === 'practice') input.focus();
   }
+
+  // 預抽下一題：讓答題手勢的當下就能得知下一題型別，據以決定是否預喚鍵盤
+  S.nextQ = q ? nextQuestion() : null;
   S.t0 = performance.now();
 }
 
+// 選擇題答對是靠計時器（非手勢）進下一題，鍵盤無法自動彈；
+// 因此趁「點選項」這個手勢，若下一題是輸入題就先 focus 常駐 input 喚起鍵盤。
+function prewakeKeyboardIfInputNext() {
+  if (S.view !== 'practice') return;
+  if (S.nextQ && S.nextQ.type === 'input') {
+    const input = $('#answer');
+    if (input) input.focus();
+  }
+}
+
 function renderChoices(opts, big) {
+  // 選擇題不需要鍵盤：把常駐 input 收起並移出畫面
+  const input = $('#answer');
+  if (input) { input.classList.add('offscreen'); input.classList.remove('ok', 'bad'); input.blur(); }
   const html = opts.map((o, i) =>
     '<button class="choice" data-i="' + i + '" data-correct="' + (o.correct ? 1 : 0) + '">' +
     '<span class="num">' + (i + 1) + '</span>' +
     '<span style="font-size:' + (big ? 30 : 24) + 'px">' + o.label + '</span></button>'
   ).join('');
-  $('#q-answer-area').innerHTML = '<div class="choices">' + html + '</div>';
-  $$('#q-answer-area .choice').forEach(b => b.addEventListener('click', () => chooseAt(+b.dataset.i)));
+  $('#q-choices').innerHTML = '<div class="choices">' + html + '</div>';
+  $$('#q-choices .choice').forEach(b => b.addEventListener('click', () => chooseAt(+b.dataset.i)));
 }
 
 function onType(e) {
@@ -675,7 +697,7 @@ function finishInput(ok) {
 
 function chooseAt(i) {
   if (S.locked || !S.q) return;
-  const btns = $$('#q-answer-area .choice');
+  const btns = $$('#q-choices .choice');
   const btn = btns[i];
   if (!btn) return;
   const ok = btn.dataset.correct === '1';
@@ -689,6 +711,8 @@ function chooseAt(i) {
   record(S.q.kana.r[0], S.q.script, ok, ok ? ms : null);
   bumpSession(ok, ok ? ms : null);
   showFeedback(ok);
+  // 答對會由計時器自動接下一題（非手勢）；趁這個點擊手勢，若下一題是輸入題就先喚鍵盤
+  if (ok) prewakeKeyboardIfInputNext();
 }
 
 function showFeedback(ok) {
@@ -948,6 +972,7 @@ function onRangeChange() {
   const n = pool().length;
   const scLabel = { h:'平假名', k:'片假名', b:'平＋片假名' }[store.settings.script];
   $('#hdr-sub').textContent = scLabel + ' · ' + n + ' 字';
+  S.nextQ = null;   // 練習範圍變了，作廢先前預抽的題目
   renderQuestion();
   newBatch();
 }
@@ -1015,7 +1040,8 @@ function setView(v) {
   $$('.view').forEach(sec => sec.classList.toggle('on', sec.id === 'view-' + v));
   if (v === 'stats') renderStats();
   if (v === 'settings') renderSettings();
-  if (v === 'practice') { const i = $('#answer'); if (i && !S.locked) i.focus(); }
+  // 只有輸入題才對焦喚鍵盤；選擇題切回來不該彈鍵盤
+  if (v === 'practice' && S.q && S.q.type === 'input' && !S.locked) $('#answer').focus();
 }
 
 document.addEventListener('keydown', e => {
@@ -1083,6 +1109,9 @@ $('#btn-export').onclick = exportJSON;
 $('#btn-import').onclick = () => $('#file-import').click();
 $('#file-import').onchange = e => { if (e.target.files[0]) importJSON(e.target.files[0]); e.target.value = ''; };
 $('#btn-reset').onclick = resetProgress;
+
+// input 常駐，onType 只需綁一次
+$('#answer').addEventListener('input', onType);
 
 initVoices();
 renderSettings();
