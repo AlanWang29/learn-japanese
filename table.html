@@ -45,24 +45,35 @@
             color: #1976d2;
         }
         table {
-            width: 100%;
+            width: auto;
+            margin: 0 auto;
             border-collapse: collapse;
             table-layout: fixed;
         }
         tr {
-            height: 28px;
+            height: 30px;
+            /* 保險：即使某頁列數估算偏差，整列也會整個移到下一頁，絕不被切半 */
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         td {
             border: 1px solid #e0e0e0;
             text-align: center;
             vertical-align: middle;
             position: relative;
+            box-sizing: border-box;
+        }
+        /* 練習格：寬高相等，保持方正 */
+        td.grid-box {
+            width: 60px;
+            height: 60px;
         }
         .平假名 td { border-color: #f8bbd0; }
         .片假名 td { border-color: #bbdefb; }
 
         /* 假名提示欄 */
         td.first-col {
+            width: 34px;
             border-width: 2px;
             background-color: #fff;
         }
@@ -88,11 +99,11 @@
             top: 50%;
             left: 0;
             right: 0;
-            border-top: 1px dashed #f48fb1;
+            border-top: 1px dashed #fad9e3;
             z-index: 1;
         }
         .片假名 td.grid-box::before {
-            border-top-color: #90caf9;
+            border-top-color: #d6e8fb;
         }
         td.grid-box::after {
             content: '';
@@ -100,11 +111,11 @@
             left: 50%;
             top: 0;
             bottom: 0;
-            border-left: 1px dashed #f48fb1;
+            border-left: 1px dashed #fad9e3;
             z-index: 1;
         }
         .片假名 td.grid-box::after {
-            border-left-color: #90caf9;
+            border-left-color: #d6e8fb;
         }
 
         /* 分頁 */
@@ -113,6 +124,11 @@
         }
         .page:last-child {
             page-break-after: auto;
+        }
+        /* 兩欄表格本身不允許被拆到跨頁 */
+        .container, table {
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         .page-label {
             text-align: center;
@@ -150,7 +166,9 @@
         ['ワ','wa'],['ヲ','wo'],['ン','n']
     ];
 
-    const PER_PAGE = 25;
+    // 每頁 15 列：15×60px 練習格 + 標題 ≈ 980px，可完整裝進 A4（去邊界後約 1047px）。
+    // 放太多列會撐破單張紙、斷點落在列中央而切掉格子（先前 25 列即如此）。
+    const PER_PAGE = 15;
     const totalPages = Math.ceil(hira.length / PER_PAGE);
 
     function buildTable(rows) {
@@ -158,7 +176,7 @@
         rows.forEach(item => {
             html += '<tr>';
             html += `<td class="first-col"><span class="kana">${item[0]}</span><span class="romaji">${item[1]}</span></td>`;
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < 5; i++) {
                 html += '<td class="grid-box"></td>';
             }
             html += '</tr>';
