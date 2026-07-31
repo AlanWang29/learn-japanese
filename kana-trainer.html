@@ -591,6 +591,8 @@ function renderQuestion() {
   S.canAdvance = false;
   $('#q-feedback').className = 'feedback';
   $('#q-feedback').innerHTML = '';
+  $('#q-feedback').onclick = null;
+  $('#q-feedback').style.cursor = '';
 
   if (!q) {
     $('#q-tag').style.display = 'none';
@@ -623,9 +625,16 @@ function renderQuestion() {
     $('#q-tag').textContent = SCRIPT_LABEL[q.script];
     $('#q-body').innerHTML = '<div class="prompt-kana">' + glyph + '</div>';
     $('#q-hint').textContent = '輸入羅馬字';
-    $('#q-answer-area').innerHTML = '<input id="answer" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="latin">';
-    const input = $('#answer');
-    input.addEventListener('input', onType);
+    // 重用同一個 input：手機上鍵盤才能全程保持彈出，不會每題被收起
+    let input = $('#answer');
+    if (!input) {
+      $('#q-answer-area').innerHTML = '<input id="answer" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="latin">';
+      input = $('#answer');
+      input.addEventListener('input', onType);
+    } else {
+      input.value = '';
+      input.classList.remove('ok', 'bad');
+    }
     if (S.view === 'practice') input.focus();
   }
   S.t0 = performance.now();
@@ -655,7 +664,8 @@ function finishInput(ok) {
   const ms = performance.now() - S.t0;
   S.locked = true;
   const input = $('#answer');
-  if (input) { input.classList.add(ok ? 'ok' : 'bad'); input.blur(); }
+  // 全程保持 focus（不 blur），手機軟鍵盤才不會收起：答對直接接下一題、答錯可按軟鍵盤 Enter 繼續
+  if (input) input.classList.add(ok ? 'ok' : 'bad');
   record(S.q.kana.r[0], S.q.script, ok, ok ? ms : null);
   bumpSession(ok, ok ? ms : null);
   showFeedback(ok);
@@ -690,8 +700,12 @@ function showFeedback(ok) {
   } else {
     fb.className = 'feedback bad';
     fb.innerHTML = '✗ 正解：<span class="big">' + k.h + ' ' + k.k + '</span> ＝ <b>' + k.r.join(' / ') + '</b>' +
-                   '<div style="font-size:12.5px;color:var(--dim);margin-top:2px">按 Enter 繼續</div>';
-    setTimeout(() => { S.canAdvance = true; }, 500);   // 強制停頓，避免手快按過去
+                   '<div style="font-size:12.5px;color:var(--dim);margin-top:2px">按 Enter 或點畫面繼續</div>';
+    setTimeout(() => {   // 強制停頓，避免手快按過去
+      S.canAdvance = true;
+      fb.style.cursor = 'pointer';
+      fb.onclick = () => { if (S.canAdvance && S.view === 'practice') { fb.onclick = null; fb.style.cursor = ''; renderQuestion(); } };
+    }, 500);
   }
 }
 
