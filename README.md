@@ -8,9 +8,9 @@ A dependency-free, browser-only toolkit for learning the Japanese kana (hiragana
 
 透過 GitHub Pages 直接開啟，不必下載：
 
-- 首頁 / Home： https://AlanWang29.github.io/jp/
-- 互動練習 / Trainer： https://AlanWang29.github.io/jp/kana-trainer.html
-- 列印練習帳 / Printable： https://AlanWang29.github.io/jp/table.html
+- 首頁 / Home： https://AlanWang29.github.io/learn-japanese/
+- 互動練習 / Trainer： https://AlanWang29.github.io/learn-japanese/kana-trainer.html
+- 列印練習帳 / Printable： https://AlanWang29.github.io/learn-japanese/table.html
 
 ## 內容 / What's inside
 
