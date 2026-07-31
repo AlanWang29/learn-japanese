@@ -65,8 +65,8 @@
         }
         /* 練習格：寬高相等，保持方正 */
         td.grid-box {
-            width: 60px;
-            height: 60px;
+            width: 56px;
+            height: 56px;
         }
         .平假名 td { border-color: #f8bbd0; }
         .片假名 td { border-color: #bbdefb; }
@@ -166,9 +166,10 @@
         ['ワ','wa'],['ヲ','wo'],['ン','n']
     ];
 
-    // 每頁 15 列：15×60px 練習格 + 標題 ≈ 980px，可完整裝進 A4（去邊界後約 1047px）。
-    // 放太多列會撐破單張紙、斷點落在列中央而切掉格子（先前 25 列即如此）。
-    const PER_PAGE = 15;
+    // 每頁 16 列：16×56px 練習格 + 標題 ≈ 1000px，可完整裝進 A4（去邊界後約 1047px）。
+    // 46 音 → 16+16+14 恰好 3 頁；若每頁 15 列會多出第 4 頁只放 1 列（ん/ン）。
+    // 練習格縮到 56px 是為了讓 16 列仍塞得進單張紙，斷點不落在列中央而切掉格子。
+    const PER_PAGE = 16;
     const totalPages = Math.ceil(hira.length / PER_PAGE);
 
     function buildTable(rows) {
