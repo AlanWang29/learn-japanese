@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>五十音學習工具</title>
+<style>
+:root {
+  --bg: #14161a; --panel: #1c1f26; --panel-2: #232730; --line: #313745;
+  --fg: #e8eaf0; --dim: #98a0b3; --accent: #6ea8fe; --pink: #f472b6; --radius: 14px;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f5f8; --panel: #ffffff; --panel-2: #eef0f5; --line: #d8dce5;
+    --fg: #1a1d23; --dim: #5f6878; --accent: #2563eb; --pink: #db2777;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--fg); line-height: 1.6;
+  font-family: system-ui, -apple-system, "Noto Sans TC", "Hiragino Sans", "Yu Gothic", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 640px; margin: 0 auto; padding: 48px 20px 64px; }
+.hero { text-align: center; margin-bottom: 36px; }
+.hero .jp { font-size: 40px; font-weight: 600; letter-spacing: .08em; font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif; }
+.hero h1 { font-size: 22px; margin: 8px 0 4px; font-weight: 600; }
+.hero p { color: var(--dim); font-size: 14px; margin: 0; }
+.cards { display: grid; gap: 14px; }
+a.card {
+  display: block; text-decoration: none; color: inherit;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px 22px; transition: border-color .15s, transform .15s;
+}
+a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.card .row { display: flex; align-items: center; gap: 14px; }
+.card .ico {
+  font-size: 26px; width: 48px; height: 48px; flex: none; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; background: var(--panel-2);
+}
+.card h2 { font-size: 17px; margin: 0; font-weight: 600; }
+.card p { color: var(--dim); font-size: 13.5px; margin: 4px 0 0; }
+.card .arrow { margin-left: auto; color: var(--dim); font-size: 20px; }
+.foot { text-align: center; color: var(--dim); font-size: 12.5px; margin-top: 36px; }
+.foot a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="jp">あ　ア</div>
+    <h1>五十音學習工具</h1>
+    <p>平假名・片假名　互動練習 + 列印練習帳</p>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="kana-trainer.html">
+      <div class="row">
+        <div class="ico">✏️</div>
+        <div>
+          <h2>互動練習</h2>
+          <p>螢幕上練：智慧出題、默寫模式、熟練度統計與發音</p>
+        </div>
+        <div class="arrow">→</div>
+      </div>
+    </a>
+
+    <a class="card" href="table.html">
+      <div class="row">
+        <div class="ico">🖨️</div>
+        <div>
+          <h2>列印練習帳</h2>
+          <p>紙上練：A4 米字格手寫練習表，可直接列印或存 PDF</p>
+        </div>
+        <div class="arrow">→</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="foot">
+    純瀏覽器、零依賴、進度存在本機 ·
+    <a href="https://github.com/AlanWang29/jp">GitHub 原始碼</a>
+  </div>
+</div>
+</body>
+</html>
