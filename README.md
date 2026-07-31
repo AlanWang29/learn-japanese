@@ -59,4 +59,4 @@ A dependency-free, browser-only toolkit for learning the Japanese kana (hiragana
 
 ## 授權 / License
 
-MIT
+MIT © 2026 Alan Wang — 詳見 [LICENSE](LICENSE)。
