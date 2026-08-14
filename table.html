@@ -71,9 +71,10 @@
         .平假名 td { border-color: #f8bbd0; }
         .片假名 td { border-color: #bbdefb; }
 
-        /* 假名提示欄 */
+        /* 假名提示欄。44px 是為了讓拗音（きゃ 兩個字元）也放得下：
+           兩張表共 2×(44+5×56)+15gap = 663px，仍在 A4 去邊界後的 718px 內 */
         td.first-col {
-            width: 34px;
+            width: 44px;
             border-width: 2px;
             background-color: #fff;
         }
@@ -143,71 +144,98 @@
             padding: 16px;
         }
         .screen-foot a { color: #1976d2; text-decoration: none; }
-        /* 列印時不顯示聯絡資訊，避免出現在練習帳上 */
-        @media print { .screen-foot { display: none; } }
+
+        /* 音種選擇列：只在螢幕上出現，不會被印進練習帳 */
+        .picker {
+            max-width: 700px; margin: 16px auto 0; padding: 10px 14px;
+            border: 1px solid #e0e0e0; border-radius: 10px;
+            font-family: system-ui, -apple-system, "Noto Sans TC", sans-serif;
+            font-size: 13px; color: #555;
+            display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        }
+        .picker label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+        .picker .cnt { color: #999; margin-left: auto; }
+        /* 列印時不顯示聯絡資訊與選擇列，避免出現在練習帳上 */
+        @media print { .screen-foot, .picker { display: none; } }
     </style>
 </head>
 <body>
 
+<div class="picker" id="picker"></div>
+<div id="sheets"></div>
+
+<script src="kana-data.js"></script>
 <script>
-    const hira = [
-        ['あ','a'],['い','i'],['う','u'],['え','e'],['お','o'],
-        ['か','ka'],['き','ki'],['く','ku'],['け','ke'],['こ','ko'],
-        ['さ','sa'],['し','shi'],['す','su'],['せ','se'],['そ','so'],
-        ['た','ta'],['ち','chi'],['つ','tsu'],['て','te'],['と','to'],
-        ['な','na'],['に','ni'],['ぬ','nu'],['ね','ne'],['の','no'],
-        ['は','ha'],['ひ','hi'],['ふ','fu'],['へ','he'],['ほ','ho'],
-        ['ま','ma'],['み','mi'],['む','mu'],['め','me'],['も','mo'],
-        ['や','ya'],['ゆ','yu'],['よ','yo'],
-        ['ら','ra'],['り','ri'],['る','ru'],['れ','re'],['ろ','ro'],
-        ['わ','wa'],['を','wo'],['ん','n']
-    ];
-    const kata = [
-        ['ア','a'],['イ','i'],['ウ','u'],['エ','e'],['オ','o'],
-        ['カ','ka'],['キ','ki'],['ク','ku'],['ケ','ke'],['コ','ko'],
-        ['サ','sa'],['シ','shi'],['ス','su'],['セ','se'],['ソ','so'],
-        ['タ','ta'],['チ','chi'],['ツ','tsu'],['テ','te'],['ト','to'],
-        ['ナ','na'],['ニ','ni'],['ヌ','nu'],['ネ','ne'],['ノ','no'],
-        ['ハ','ha'],['ヒ','hi'],['フ','fu'],['ヘ','he'],['ホ','ho'],
-        ['マ','ma'],['ミ','mi'],['ム','mu'],['メ','me'],['モ','mo'],
-        ['ヤ','ya'],['ユ','yu'],['ヨ','yo'],
-        ['ラ','ra'],['リ','ri'],['ル','ru'],['レ','re'],['ロ','ro'],
-        ['ワ','wa'],['ヲ','wo'],['ン','n']
-    ];
+    if (!window.KANA_DATA) {
+        document.getElementById('sheets').innerHTML =
+            '<p style="text-align:center;padding:40px;font-family:system-ui">' +
+            '找不到 <b>kana-data.js</b>，本頁需要與該檔案放在同一個資料夾。</p>';
+        throw new Error('kana-data.js not loaded');
+    }
+    const { KANA, ROWS, GROUPS } = window.KANA_DATA;
 
     // 每頁 16 列：16×56px 練習格 + 標題 ≈ 1000px，可完整裝進 A4（去邊界後約 1047px）。
-    // 46 音 → 16+16+14 恰好 3 頁；若每頁 15 列會多出第 4 頁只放 1 列（ん/ン）。
     // 練習格縮到 56px 是為了讓 16 列仍塞得進單張紙，斷點不落在列中央而切掉格子。
+    // 預設只印清音 46 音 → 16+16+14 恰好 3 頁；全部 104 音則是 7 頁。
     const PER_PAGE = 16;
-    const totalPages = Math.ceil(hira.length / PER_PAGE);
 
-    function buildTable(rows) {
+    const rowGroup = new Map(ROWS.map(r => [r.id, r.g]));
+    // 預設只勾清音，與互動練習的預設範圍一致
+    const picked = new Set(['sei']);
+
+    function buildTable(rows, script) {
         let html = '<table>';
         rows.forEach(item => {
             html += '<tr>';
-            html += `<td class="first-col"><span class="kana">${item[0]}</span><span class="romaji">${item[1]}</span></td>`;
-            for (let i = 0; i < 5; i++) {
-                html += '<td class="grid-box"></td>';
-            }
+            // 練習帳的假名就印在羅馬字旁邊，ぢ/づ 不會混淆，用主羅馬字即可
+            html += `<td class="first-col"><span class="kana">${item[script]}</span>` +
+                    `<span class="romaji">${item.r[0]}</span></td>`;
+            for (let i = 0; i < 5; i++) html += '<td class="grid-box"></td>';
             html += '</tr>';
         });
         return html + '</table>';
     }
 
-    for (let p = 0; p < totalPages; p++) {
-        const start = p * PER_PAGE;
-        const end = start + PER_PAGE;
-        const hSlice = hira.slice(start, end);
-        const kSlice = kata.slice(start, end);
-        document.write('<div class="page">');
-        document.write('<h1><a href="index.html" style="color:inherit;text-decoration:none">🌸 ひらがな・カタカナ 練習帳 🌸</a></h1>');
-        document.write('<div class="container">');
-        document.write('<div class="section 平假名"><div class="section-title">ひらがな（平假名）</div>' + buildTable(hSlice) + '</div>');
-        document.write('<div class="section 片假名"><div class="section-title">カタカナ（片假名）</div>' + buildTable(kSlice) + '</div>');
-        document.write('</div>');
-        document.write(`<div class="page-label">第 ${p + 1} / ${totalPages} 頁</div>`);
-        document.write('</div>');
+    function renderSheets() {
+        const list = KANA.filter(k => picked.has(rowGroup.get(k.row)));
+        const totalPages = Math.ceil(list.length / PER_PAGE);
+        let html = '';
+        for (let p = 0; p < totalPages; p++) {
+            const slice = list.slice(p * PER_PAGE, (p + 1) * PER_PAGE);
+            html += '<div class="page">' +
+                '<h1><a href="index.html" style="color:inherit;text-decoration:none">🌸 ひらがな・カタカナ 練習帳 🌸</a></h1>' +
+                '<div class="container">' +
+                    '<div class="section 平假名"><div class="section-title">ひらがな（平假名）</div>' + buildTable(slice, 'h') + '</div>' +
+                    '<div class="section 片假名"><div class="section-title">カタカナ（片假名）</div>' + buildTable(slice, 'k') + '</div>' +
+                '</div>' +
+                `<div class="page-label">第 ${p + 1} / ${totalPages} 頁</div>` +
+            '</div>';
+        }
+        document.getElementById('sheets').innerHTML = html ||
+            '<p style="text-align:center;padding:40px;color:#999;font-family:system-ui">請至少勾選一種音。</p>';
+        document.getElementById('picker-cnt').textContent = list.length + ' 音 · ' + totalPages + ' 頁';
     }
+
+    function renderPicker() {
+        const counts = {};
+        for (const k of KANA) {
+            const g = rowGroup.get(k.row);
+            counts[g] = (counts[g] || 0) + 1;
+        }
+        document.getElementById('picker').innerHTML =
+            '<span>要印的音：</span>' +
+            GROUPS.map(g =>
+                `<label><input type="checkbox" data-g="${g.id}"${picked.has(g.id) ? ' checked' : ''}>` +
+                `${g.label} ${counts[g.id]}</label>`).join('') +
+            '<span class="cnt" id="picker-cnt"></span>';
+        document.querySelectorAll('#picker input').forEach(inp => inp.onchange = () => {
+            inp.checked ? picked.add(inp.dataset.g) : picked.delete(inp.dataset.g);
+            renderSheets();
+        });
+    }
+
+    renderPicker();
+    renderSheets();
 </script>
 
 <footer class="screen-foot">

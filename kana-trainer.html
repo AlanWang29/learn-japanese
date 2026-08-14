@@ -62,7 +62,10 @@ nav button.on { background: var(--panel-2); color: var(--fg); }
 /* ---------- 練習 ---------- */
 .stage { text-align: center; padding: 16px 0 8px; }
 .prompt-kana { font-size: 112px; line-height: 1.1; font-weight: 500; font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif; }
-.prompt-romaji { font-size: 72px; line-height: 1.2; font-weight: 600; letter-spacing: .04em; }
+/* 拗音是兩個字元，維持 112px 會在窄螢幕溢出 */
+.prompt-kana.wide { font-size: min(76px, 26vw); }
+/* 同音字的題幹會長成 "ji (di)"，比單純的 tsu 寬一倍，窄螢幕要能縮 */
+.prompt-romaji { font-size: min(72px, 15vw); line-height: 1.2; font-weight: 600; letter-spacing: .04em; }
 .prompt-hint { color: var(--dim); font-size: 13px; min-height: 20px; }
 .script-tag { display: inline-block; font-size: 12px; color: var(--dim); border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; margin-bottom: 6px; }
 
@@ -99,7 +102,8 @@ nav button.on { background: var(--panel-2); color: var(--fg); }
 .meter b { color: var(--fg); font-weight: 600; }
 
 /* ---------- 默寫 ---------- */
-.write-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin: 8px 0 4px; }
+/* 拗音公佈答案時一格要塞下「kya ／ きゃ キャ」，120px 會擠爆 */
+.write-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 8px 0 4px; }
 .write-item {
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
   padding: 10px 12px; display: flex; align-items: center; gap: 10px;
@@ -147,7 +151,14 @@ nav button.on { background: var(--panel-2); color: var(--fg); }
 
 /* ---------- 設定 ---------- */
 label.opt { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; font-size: 14px; }
-.rowsel { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 4px 12px; margin-top: 6px; }
+.rowsel { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 4px 12px; margin-top: 2px; }
+.grp + .grp { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.grp-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.grp-name { font-size: 13.5px; font-weight: 600; }
+.grp-cnt { color: var(--dim); font-size: 12px; }
+.grp-head .lnk:first-of-type { margin-left: auto; }
+.lnk { background: none; border: 0; color: var(--accent); font: inherit; font-size: 12px; padding: 2px 3px; cursor: pointer; }
+.lnk:hover { text-decoration: underline; }
 .seg { display: inline-flex; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 3px; gap: 3px; }
 .seg button { background: none; border: 0; color: var(--dim); font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
 .seg button.on { background: var(--panel); color: var(--fg); }
@@ -222,13 +233,14 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
       <div class="note" id="s-selfnote"></div>
     </div>
     <div class="card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
         <h2 style="margin:0">熟練度熱力圖</h2>
         <div class="seg" style="margin-left:auto" id="heat-seg">
           <button data-script="h" class="on">平假名</button>
           <button data-script="k">片假名</button>
         </div>
       </div>
+      <div class="seg" id="heat-group" style="margin-bottom:4px;flex-wrap:wrap"></div>
       <div class="grid-heat" id="s-heat"></div>
       <div class="note">格內小字為正確率；灰色代表尚未練過。</div>
     </div>
@@ -251,11 +263,12 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
       <div class="hr"></div>
 
       <h2>練習範圍</h2>
-      <div class="rowsel" id="set-rows"></div>
+      <div id="set-rows"></div>
       <div class="btns">
         <button class="btn" id="rows-all">全選</button>
         <button class="btn" id="rows-none">全不選</button>
       </div>
+      <div class="note">濁音・半濁音・拗音預設關閉，勾選後才會出現在練習與默寫中。</div>
 
       <div class="hr"></div>
 
@@ -299,82 +312,27 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   © 2026 Alan Wang
 </footer>
 
+<script src="kana-data.js"></script>
 <script>
 "use strict";
 
 /* =======================================================================
-   資料：46 清音。r[0] 為主羅馬字（同時作為資料 id），其餘為可接受的異寫。
-   col = 段（0=あ 1=い 2=う 3=え 4=お），用於五十音圖排版與誘答項挑選。
+   資料：來自 kana-data.js（與 table.html 共用）。
    ======================================================================= */
-const KANA = [
-  {h:'あ',k:'ア',r:['a'],   row:'a', col:0},
-  {h:'い',k:'イ',r:['i'],   row:'a', col:1},
-  {h:'う',k:'ウ',r:['u'],   row:'a', col:2},
-  {h:'え',k:'エ',r:['e'],   row:'a', col:3},
-  {h:'お',k:'オ',r:['o'],   row:'a', col:4},
+if (!window.KANA_DATA) {
+  document.getElementById('app').innerHTML =
+    '<div class="card"><h2>資料檔載入失敗</h2><div class="note">' +
+    '找不到 <b>kana-data.js</b>。這個頁面需要與該檔案放在同一個資料夾，' +
+    '請確認下載時兩個檔案都有拿到。</div></div>';
+  throw new Error('kana-data.js not loaded');
+}
+const { KANA, ROWS, GROUPS, romajiLabel } = window.KANA_DATA;
 
-  {h:'か',k:'カ',r:['ka'],  row:'ka', col:0},
-  {h:'き',k:'キ',r:['ki'],  row:'ka', col:1},
-  {h:'く',k:'ク',r:['ku'],  row:'ka', col:2},
-  {h:'け',k:'ケ',r:['ke'],  row:'ka', col:3},
-  {h:'こ',k:'コ',r:['ko'],  row:'ka', col:4},
-
-  {h:'さ',k:'サ',r:['sa'],        row:'sa', col:0},
-  {h:'し',k:'シ',r:['shi','si'],  row:'sa', col:1},
-  {h:'す',k:'ス',r:['su'],        row:'sa', col:2},
-  {h:'せ',k:'セ',r:['se'],        row:'sa', col:3},
-  {h:'そ',k:'ソ',r:['so'],        row:'sa', col:4},
-
-  {h:'た',k:'タ',r:['ta'],        row:'ta', col:0},
-  {h:'ち',k:'チ',r:['chi','ti'],  row:'ta', col:1},
-  {h:'つ',k:'ツ',r:['tsu','tu'],  row:'ta', col:2},
-  {h:'て',k:'テ',r:['te'],        row:'ta', col:3},
-  {h:'と',k:'ト',r:['to'],        row:'ta', col:4},
-
-  {h:'な',k:'ナ',r:['na'],  row:'na', col:0},
-  {h:'に',k:'ニ',r:['ni'],  row:'na', col:1},
-  {h:'ぬ',k:'ヌ',r:['nu'],  row:'na', col:2},
-  {h:'ね',k:'ネ',r:['ne'],  row:'na', col:3},
-  {h:'の',k:'ノ',r:['no'],  row:'na', col:4},
-
-  {h:'は',k:'ハ',r:['ha'],       row:'ha', col:0},
-  {h:'ひ',k:'ヒ',r:['hi'],       row:'ha', col:1},
-  {h:'ふ',k:'フ',r:['fu','hu'],  row:'ha', col:2},
-  {h:'へ',k:'ヘ',r:['he'],       row:'ha', col:3},
-  {h:'ほ',k:'ホ',r:['ho'],       row:'ha', col:4},
-
-  {h:'ま',k:'マ',r:['ma'],  row:'ma', col:0},
-  {h:'み',k:'ミ',r:['mi'],  row:'ma', col:1},
-  {h:'む',k:'ム',r:['mu'],  row:'ma', col:2},
-  {h:'め',k:'メ',r:['me'],  row:'ma', col:3},
-  {h:'も',k:'モ',r:['mo'],  row:'ma', col:4},
-
-  {h:'や',k:'ヤ',r:['ya'],  row:'ya', col:0},
-  {h:'ゆ',k:'ユ',r:['yu'],  row:'ya', col:2},
-  {h:'よ',k:'ヨ',r:['yo'],  row:'ya', col:4},
-
-  {h:'ら',k:'ラ',r:['ra'],  row:'ra', col:0},
-  {h:'り',k:'リ',r:['ri'],  row:'ra', col:1},
-  {h:'る',k:'ル',r:['ru'],  row:'ra', col:2},
-  {h:'れ',k:'レ',r:['re'],  row:'ra', col:3},
-  {h:'ろ',k:'ロ',r:['ro'],  row:'ra', col:4},
-
-  {h:'わ',k:'ワ',r:['wa'],  row:'wa', col:0},
-  // を 只收 wo：若同時接受 o 會與お撞號，反向題會出現兩個正確答案
-  {h:'を',k:'ヲ',r:['wo'],  row:'wa', col:4},
-
-  {h:'ん',k:'ン',r:['n','nn'],  row:'n', col:0},
-];
-
-const ROWS = [
-  {id:'a',  label:'あ行'}, {id:'ka', label:'か行'}, {id:'sa', label:'さ行'},
-  {id:'ta', label:'た行'}, {id:'na', label:'な行'}, {id:'ha', label:'は行'},
-  {id:'ma', label:'ま行'}, {id:'ya', label:'や行'}, {id:'ra', label:'ら行'},
-  {id:'wa', label:'わ行'}, {id:'n',  label:'ん'},
-];
-
-const byId = new Map(KANA.map(x => [x.r[0], x]));
+const byId = new Map(KANA.map(x => [x.id, x]));
 const SCRIPT_LABEL = {h:'平假名', k:'片假名'};
+// 熱力圖每格都要找「某行某段的字」，先建索引省掉 27×5 次線性搜尋
+const byCell = new Map(KANA.map(x => [x.row + '|' + x.col, x]));
+const rowKanaCount = new Map(ROWS.map(r => [r.id, KANA.filter(k => k.row === r.id).length]));
 
 /* =======================================================================
    儲存
@@ -389,7 +347,9 @@ function defaultStore() {
     selfRated: 0,          // 由默寫模式自評產生的作答數
     settings: {
       script: 'b',         // h | k | b
-      rows: ROWS.map(r => r.id),
+      // 預設只開清音：濁音／半濁音／拗音要自己到設定頁勾。
+      // 既有使用者的 rows 會在 load() 覆蓋掉這個預設值，所以升級後範圍不變。
+      rows: ROWS.filter(r => r.g === 'sei').map(r => r.id),
       reversePct: 20,
       batch: 10,
       speak: false,
@@ -439,6 +399,7 @@ const S = {
   canAdvance: false,
   t0: 0,
   heatScript: 'h',
+  heatGroup: 'sei',
   lastKanaId: null,
   w: { batch:[], revealed:false, idx:0, done:false },
   resetArmed: false,
@@ -468,7 +429,7 @@ function activeScripts() {
 const WRONG_STREAK_CAP = 3;
 
 function weightOf(k, script) {
-  const s = stat(k.r[0], script);
+  const s = stat(k.id, script);
   const total = s.c + s.w;
   const err = total ? s.w / total : 0.5;
   let w = 1 + 3 * err + 1.5 * Math.min(s.wrongStreak, WRONG_STREAK_CAP);
@@ -496,13 +457,13 @@ function nextQuestion() {
     let w = weightOf(k, sc);
     // 上一題出過的字直接壓到底：否則在混合模式下會出現「き 之後緊接著 キ」，
     // 答案才剛看過，等於白問一題（lastTurn 是按字形分開記的，擋不住這種情況）
-    if (k.r[0] === S.lastKanaId) w *= 0.02;
+    if (k.id === S.lastKanaId) w *= 0.02;
     cands.push({ k, script: sc, w });
   }
   const pick = pickWeighted(cands);
-  S.lastKanaId = pick.k.r[0];
+  S.lastKanaId = pick.k.id;
 
-  const st = stat(pick.k.r[0], pick.script);
+  const st = stat(pick.k.id, pick.script);
   let type;
   if (st.demoted) type = 'choiceRomaji';                              // 連錯 2 次 → 降級成選擇題
   else if (Math.random() * 100 < store.settings.reversePct) type = 'choiceKana';
@@ -511,9 +472,13 @@ function nextQuestion() {
   return { kana: pick.k, script: pick.script, type, demoted: st.demoted };
 }
 
-/** 誘答項：優先同行、其次同段，最後隨機補滿。 */
+/**
+ * 誘答項：優先同行、其次同段，最後隨機補滿。
+ * 同音字（じ/ぢ、ず/づ）一律排除：反向題會變成兩個正確答案，
+ * 降級題則會出現兩個一模一樣的羅馬字選項。
+ */
 function distractors(target, n) {
-  const p = pool().filter(x => x !== target);
+  const p = pool().filter(x => x !== target && !(x.hom && x.hom === target.hom));
   const sameRow = shuffle(p.filter(x => x.row === target.row));
   const sameCol = shuffle(p.filter(x => x.col === target.col && x.row !== target.row));
   const rest = shuffle(p.filter(x => x.row !== target.row && x.col !== target.col));
@@ -619,25 +584,27 @@ function renderQuestion() {
   S.turn++;
   $('#q-tag').style.display = '';
   const glyph = q.kana[q.script];
+  // 拗音是兩個字元，112px 在窄螢幕會撐破版面
+  const kanaCls = 'prompt-kana' + (glyph.length > 1 ? ' wide' : '');
 
   if (q.type === 'choiceKana') {
     // 反向題：顯示羅馬字，從假名中選
     $('#q-tag').textContent = '選出' + SCRIPT_LABEL[q.script];
-    $('#q-body').innerHTML = '<div class="prompt-romaji">' + q.kana.r[0] + '</div>';
+    $('#q-body').innerHTML = '<div class="prompt-romaji">' + romajiLabel(q.kana) + '</div>';
     $('#q-hint').textContent = '按 1–4 選擇';
     const opts = shuffle([q.kana, ...distractors(q.kana, 3)]);
     renderChoices(opts.map(o => ({ label: o[q.script], correct: o === q.kana })), true);
   } else if (q.type === 'choiceRomaji') {
     // 降級題：顯示假名，從羅馬字中選
     $('#q-tag').textContent = SCRIPT_LABEL[q.script] + '・複習';
-    $('#q-body').innerHTML = '<div class="prompt-kana">' + glyph + '</div>';
+    $('#q-body').innerHTML = '<div class="' + kanaCls + '">' + glyph + '</div>';
     $('#q-hint').textContent = '這個字先前答錯過，改用選擇題 · 按 1–4';
     const opts = shuffle([q.kana, ...distractors(q.kana, 3)]);
-    renderChoices(opts.map(o => ({ label: o.r[0], correct: o === q.kana })), false);
+    renderChoices(opts.map(o => ({ label: romajiLabel(o), correct: o === q.kana })), false);
   } else {
     // 輸入題
     $('#q-tag').textContent = SCRIPT_LABEL[q.script];
-    $('#q-body').innerHTML = '<div class="prompt-kana">' + glyph + '</div>';
+    $('#q-body').innerHTML = '<div class="' + kanaCls + '">' + glyph + '</div>';
     $('#q-hint').textContent = '輸入羅馬字';
     // 常駐 input：清空、露出、對焦。連續輸入題間鍵盤保持不收；
     // 若剛才在選擇題手勢中已預先 focus，這裡再 focus 一次也只是維持鍵盤。
@@ -690,7 +657,7 @@ function finishInput(ok) {
   const input = $('#answer');
   // 全程保持 focus（不 blur），手機軟鍵盤才不會收起：答對直接接下一題、答錯可按軟鍵盤 Enter 繼續
   if (input) input.classList.add(ok ? 'ok' : 'bad');
-  record(S.q.kana.r[0], S.q.script, ok, ok ? ms : null);
+  record(S.q.kana.id, S.q.script, ok, ok ? ms : null);
   bumpSession(ok, ok ? ms : null);
   showFeedback(ok);
 }
@@ -708,7 +675,7 @@ function chooseAt(i) {
     if (b.dataset.correct === '1') b.classList.add('ok');
   });
   if (!ok) btn.classList.add('bad');
-  record(S.q.kana.r[0], S.q.script, ok, ok ? ms : null);
+  record(S.q.kana.id, S.q.script, ok, ok ? ms : null);
   bumpSession(ok, ok ? ms : null);
   showFeedback(ok);
   // 答對會由計時器自動接下一題（非手勢）；趁這個點擊手勢，若下一題是輸入題就先喚鍵盤
@@ -788,7 +755,7 @@ function renderWriting() {
     }
     return '<div class="' + cls.join(' ') + '">' +
       '<span class="idx">' + (i + 1) + '.</span>' +
-      '<span class="rom">' + item.kana.r[0] + '</span>' + right + '</div>';
+      '<span class="rom">' + romajiLabel(item.kana) + '</span>' + right + '</div>';
   }).join('');
 
   const c = $('#w-controls');
@@ -805,7 +772,7 @@ function renderWriting() {
       : [['1','寫對了',1],['2','沒寫對',0]];
     c.innerHTML = '<div class="rate-bar">' + opts.map(o =>
       '<button data-key="' + o[0] + '"><span class="key">' + o[0] + '</span>' + o[1] + '</button>').join('') + '</div>' +
-      '<div class="note">第 ' + (w.idx + 1) + ' 題　<b style="color:var(--fg)">' + cur.kana.r[0] + '</b> → ' +
+      '<div class="note">第 ' + (w.idx + 1) + ' 題　<b style="color:var(--fg)">' + romajiLabel(cur.kana) + '</b> → ' +
       scripts.map(sc => cur.kana[sc]).join(' ') + '</div>';
     $$('#w-controls .rate-bar button').forEach(b => b.onclick = () => rateCurrent(b.dataset.key));
     $('#w-note').innerHTML = '按 <span class="kbd">1</span>–<span class="kbd">' + opts.length + '</span> 自評，評完自動跳下一題。';
@@ -846,8 +813,8 @@ function rateCurrent(key) {
     else if (key === '3') { hOk = false; kOk = true;  score = 0.5; mark = '片 ✓'; }
     else if (key === '4') { hOk = false; kOk = false; score = 0;   mark = '✗✗'; }
     else return;
-    record(item.kana.r[0], 'h', hOk, null);
-    record(item.kana.r[0], 'k', kOk, null);
+    record(item.kana.id, 'h', hOk, null);
+    record(item.kana.id, 'k', kOk, null);
     bumpSession(hOk, null);
     bumpSession(kOk, null);
     store.selfRated += 2;
@@ -855,7 +822,7 @@ function rateCurrent(key) {
     if (key === '1')      { score = 1; mark = '✓'; }
     else if (key === '2') { score = 0; mark = '✗'; }
     else return;
-    record(item.kana.r[0], scripts[0], score === 1, null);
+    record(item.kana.id, scripts[0], score === 1, null);
     bumpSession(score === 1, null);
     store.selfRated += 1;
   }
@@ -897,11 +864,12 @@ function kpi(label, val) {
 function renderHeat() {
   const sc = S.heatScript;
   const cells = [];
-  for (const row of ROWS) {
+  // 一次只畫一種音，否則 27 行 ×5 格要捲好幾個螢幕高
+  for (const row of ROWS.filter(r => r.g === S.heatGroup)) {
     for (let col = 0; col < 5; col++) {
-      const k = KANA.find(x => x.row === row.id && x.col === col);
+      const k = byCell.get(row.id + '|' + col);
       if (!k) { cells.push('<div class="cell empty"></div>'); continue; }
-      const s = store.stats[k.r[0] + '|' + sc];
+      const s = store.stats[k.id + '|' + sc];
       const t = s ? s.c + s.w : 0;
       if (!t) {
         cells.push('<div class="cell" style="color:var(--dim)">' + k[sc] + '<small>—</small></div>');
@@ -938,7 +906,7 @@ function renderWeak() {
   $('#s-weak').innerHTML = top.map(r =>
     '<div class="weak-row">' +
       '<span class="kana">' + r.k[r.sc] + '</span>' +
-      '<span class="rom">' + r.k.r[0] + '</span>' +
+      '<span class="rom">' + romajiLabel(r.k) + '</span>' +
       '<span class="bar"><i style="width:' + Math.round(r.err * 100) + '%"></i></span>' +
       '<span class="num">錯 ' + r.w + ' / ' + r.t + '（' + Math.round(r.err * 100) + '%）</span>' +
     '</div>').join('');
@@ -954,17 +922,52 @@ function renderSettings() {
   $('#set-rev-val').textContent = store.settings.reversePct + '%';
   $('#set-speak').checked = store.settings.speak;
 
-  $('#set-rows').innerHTML = ROWS.map(r =>
-    '<label class="opt"><input type="checkbox" data-row="' + r.id + '"' +
-    (store.settings.rows.includes(r.id) ? ' checked' : '') + '> ' + r.label + '</label>').join('');
+  $('#set-rows').innerHTML = GROUPS.map(g =>
+    '<div class="grp">' +
+      '<div class="grp-head">' +
+        '<span class="grp-name">' + g.label + '</span>' +
+        '<span class="grp-cnt" data-cnt="' + g.id + '"></span>' +
+        '<button class="lnk" data-g="' + g.id + '" data-act="all">全選</button>' +
+        '<button class="lnk" data-g="' + g.id + '" data-act="none">全不選</button>' +
+      '</div>' +
+      '<div class="rowsel">' + ROWS.filter(r => r.g === g.id).map(r =>
+        '<label class="opt"><input type="checkbox" data-row="' + r.id + '"' +
+        (store.settings.rows.includes(r.id) ? ' checked' : '') + '> ' + r.label + '</label>'
+      ).join('') + '</div>' +
+    '</div>').join('');
+
   $$('#set-rows input').forEach(inp => inp.onchange = () => {
-    const id = inp.dataset.row;
     const set = new Set(store.settings.rows);
-    inp.checked ? set.add(id) : set.delete(id);
-    store.settings.rows = ROWS.map(r => r.id).filter(x => set.has(x));
-    save();
-    onRangeChange();
+    inp.checked ? set.add(inp.dataset.row) : set.delete(inp.dataset.row);
+    applyRows(set);          // 不重繪整塊，避免打勾時焦點跳掉
+    renderGroupCounts();
   });
+  $$('#set-rows .lnk').forEach(b => b.onclick = () => {
+    const ids = ROWS.filter(r => r.g === b.dataset.g).map(r => r.id);
+    const set = new Set(store.settings.rows);
+    ids.forEach(id => b.dataset.act === 'all' ? set.add(id) : set.delete(id));
+    applyRows(set);
+    renderSettings();
+  });
+  renderGroupCounts();
+}
+
+/** 統一寫回練習範圍：依 ROWS 原順序正規化，順便存檔與重新出題。 */
+function applyRows(set) {
+  store.settings.rows = ROWS.map(r => r.id).filter(x => set.has(x));
+  save();
+  onRangeChange();
+}
+
+function renderGroupCounts() {
+  const on = new Set(store.settings.rows);
+  for (const g of GROUPS) {
+    const rows = ROWS.filter(r => r.g === g.id);
+    const total = rows.reduce((a, r) => a + rowKanaCount.get(r.id), 0);
+    const sel = rows.reduce((a, r) => a + (on.has(r.id) ? rowKanaCount.get(r.id) : 0), 0);
+    const el = $('#set-rows [data-cnt="' + g.id + '"]');
+    if (el) el.textContent = sel + ' / ' + total + ' 音';
+  }
 }
 
 /** 範圍或字形變動後，重出題目並更新標題。 */
@@ -1102,6 +1105,16 @@ $('#heat-seg').onclick = e => {
   if (!b) return;
   S.heatScript = b.dataset.script;
   $$('#heat-seg button').forEach(x => x.classList.toggle('on', x === b));
+  renderHeat();
+};
+
+$('#heat-group').innerHTML = GROUPS.map(g =>
+  '<button data-g="' + g.id + '"' + (g.id === S.heatGroup ? ' class="on"' : '') + '>' + g.label + '</button>').join('');
+$('#heat-group').onclick = e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  S.heatGroup = b.dataset.g;
+  $$('#heat-group button').forEach(x => x.classList.toggle('on', x === b));
   renderHeat();
 };
 
