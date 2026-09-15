@@ -21,8 +21,39 @@ A dependency-free, browser-only toolkit for learning the Japanese kana (hiragana
 | [table.html](table.html) | 可列印的手寫練習帳（紙上練） |
 | [kana-data.js](kana-data.js) | 假名資料，上面兩個工具共用 |
 | [五十音練習帳.pdf](五十音練習帳.pdf) | 由 `table.html` 產生的練習帳 PDF，全 104 音共 7 頁，可直接列印 |
+| [sw.js](sw.js)、[pwa.js](pwa.js)、[manifest.webmanifest](manifest.webmanifest) | 離線 PWA（見下方「離線使用」） |
+| [build.sh](build.sh)、[_headers](_headers) | Cloudflare Pages 部署用（見下方「部署」） |
 
 > 若要下載到本機使用，請把 `kana-data.js` 與 HTML 放在同一個資料夾 —— 兩個工具都需要它。
+
+## 離線使用 / Offline
+
+網站是 offline-first PWA：**第一次開啟後，斷網再重新整理也能正常使用**，也能「加到主畫面」當 App 開。頁尾出現「✓ 已可離線使用」就代表可以斷網了。
+
+- `sw.js` 在安裝時預先快取所有頁面與資源，全部成功才算安裝完成。
+- 有網路時，瀏覽器每次開頁都會檢查新版本，並在背景下載整套新檔案；下載完成後畫面底部會出現「有新版本 · 重新整理」，不按的話下次開啟時自動套用。
+- 版本號由 `build.sh` 依網站內容自動產生，只改 README 之類的檔案不會觸發更新。
+- 離線功能需要 https（或 localhost）；直接用 `file://` 開啟 HTML 時照常可用，只是不啟用離線快取。
+
+## 部署 / Deploy
+
+Cloudflare Pages 設定：
+
+| 項目 | 值 |
+| --- | --- |
+| Framework preset | None |
+| Build command | `sh build.sh` |
+| Build output directory | `dist` |
+
+`build.sh` 只會把網站需要的檔案複製到 `dist/`（README、LICENSE、PDF 不會部署），並填入版本號。`_headers` 設定安全標頭（CSP 等）。
+
+新增網站檔案時，要同時加進 `build.sh` 的 `FILES` 與 `sw.js` 的 `PRECACHE`。
+
+離線驗收測試（需要 `pip install playwright` 與 Google Chrome）：
+
+```bash
+python3 tests/offline_test.py
+```
 
 ## 收錄範圍 / Coverage
 
@@ -61,6 +92,7 @@ A dependency-free, browser-only toolkit for learning the Japanese kana (hiragana
 ## 技術 / Tech
 
 - 純 HTML + CSS + 原生 JavaScript，無任何框架與外部相依。
+- 離線功能用原生 Service Worker 實作，同樣零相依。
 - 假名資料集中在 `kana-data.js`（classic script，`file://` 直接開也載得動），兩個工具共用同一份。
 - 資料全部存在本機，不上傳任何內容。
 

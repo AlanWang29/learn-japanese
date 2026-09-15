@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>50音練習</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#14161a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f8" media="(prefers-color-scheme: light)">
+<script src="pwa.js" defer></script>
 <style>
 :root {
   --bg: #14161a;
@@ -308,6 +314,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 
 <footer style="text-align:center;color:var(--dim);font-size:12.5px;padding:24px 16px 40px">
   © 2026 Alan Wang
+  <div id="offline-status"></div>
 </footer>
 
 <script src="kana-data.js"></script>
