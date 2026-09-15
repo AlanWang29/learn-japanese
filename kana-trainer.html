@@ -541,9 +541,11 @@ let jaVoice = null;
 function initVoices() {
   if (!('speechSynthesis' in window)) { $('#voice-status').textContent = '（此瀏覽器不支援語音合成）'; return; }
   const pick = () => {
-    const vs = speechSynthesis.getVoices();
-    jaVoice = vs.find(v => /^ja/i.test(v.lang)) || null;
-    $('#voice-status').textContent = jaVoice ? '目前偵測到：' + jaVoice.name : '（目前系統未偵測到日文語音）';
+    const ja = speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang));
+    // 優先用裝置內建語音：雲端語音（例如 Chrome 的 Google 日本語）離線時無法發音
+    jaVoice = ja.find(v => v.localService) || ja[0] || null;
+    $('#voice-status').textContent = !jaVoice ? '（目前系統未偵測到日文語音）'
+      : '目前偵測到：' + jaVoice.name + (jaVoice.localService ? '' : '（雲端語音，需連網）');
   };
   pick();
   speechSynthesis.onvoiceschanged = pick;
