@@ -22,7 +22,7 @@ A dependency-free, browser-only toolkit for learning the Japanese kana (hiragana
 | [kana-data.js](kana-data.js) | 假名資料，上面兩個工具共用 |
 | [五十音練習帳.pdf](五十音練習帳.pdf) | 由 `table.html` 產生的練習帳 PDF，全 104 音共 7 頁，可直接列印 |
 | [sw.js](sw.js)、[pwa.js](pwa.js)、[manifest.webmanifest](manifest.webmanifest) | 離線 PWA（見下方「離線使用」） |
-| [build.sh](build.sh)、[_headers](_headers) | Cloudflare Pages 部署用（見下方「部署」） |
+| [build.sh](build.sh)、[wrangler.jsonc](wrangler.jsonc)、[_headers](_headers) | Cloudflare 部署用（見下方「部署」） |
 
 > 若要下載到本機使用，請把 `kana-data.js` 與 HTML 放在同一個資料夾 —— 兩個工具都需要它。
 
@@ -37,15 +37,13 @@ A dependency-free, browser-only toolkit for learning the Japanese kana (hiragana
 
 ## 部署 / Deploy
 
-Cloudflare Pages 設定：
+部署在 Cloudflare Workers（靜態網站）。Cloudflare 連接 GitHub 後，push 到 `main` 就會自動部署（Deploy command 用預設的 `npx wrangler deploy`）。
 
-| 項目 | 值 |
-| --- | --- |
-| Framework preset | None |
-| Build command | `sh build.sh` |
-| Build output directory | `dist` |
+- `wrangler.jsonc`：部署前執行 `sh build.sh`，而且只上傳 `dist/`。沒有這個檔案時，Cloudflare 會把整個 repo（包括 `.git/`）當成網站上傳。
+- `build.sh`：只把網站需要的檔案複製到 `dist/`（README、LICENSE、PDF 不會部署），並填入版本號。
+- `_headers`：安全標頭（CSP 等）。
 
-`build.sh` 只會把網站需要的檔案複製到 `dist/`（README、LICENSE、PDF 不會部署），並填入版本號。`_headers` 設定安全標頭（CSP 等）。
+本機模擬部署（不會上傳）：`npx wrangler deploy --dry-run`
 
 新增網站檔案時，要同時加進 `build.sh` 的 `FILES` 與 `sw.js` 的 `PRECACHE`。
 
