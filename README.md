@@ -64,12 +64,6 @@ A dependency-free, browser-only toolkit for learning the Japanese kana (hiragana
 - 假名資料集中在 `kana-data.js`（classic script，`file://` 直接開也載得動），兩個工具共用同一份。
 - 資料全部存在本機，不上傳任何內容。
 
-## 聯絡 / Contact
-
-有問題或建議歡迎來信 / Questions or suggestions are welcome：
-
-- Email： [email removed]
-
 ## 授權 / License
 
 MIT © 2026 Alan Wang — 詳見 [LICENSE](LICENSE)。
