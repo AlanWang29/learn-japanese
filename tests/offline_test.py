@@ -3,7 +3,7 @@
 驗收條件：第一次訪問載入完成後，斷網再重新整理，所有功能正常；
 恢復連線後有新版本時，會提示並能更新。
 
-用本機伺服器模擬 Cloudflare Pages 的行為（/x.html 轉址到 /x、套用 _headers），
+用本機伺服器模擬 Cloudflare 靜態網站的行為（/x.html 轉址到 /x、套用 _headers），
 以全新的瀏覽器設定檔跑，不會靠之前留下的快取過關。
 
 需求：pip install playwright，以及系統已安裝 Google Chrome。
@@ -42,7 +42,7 @@ def parse_headers(root):
 
 
 class PagesHandler(BaseHTTPRequestHandler):
-    """模擬 Cloudflare Pages：去副檔名轉址、套用 _headers。"""
+    """模擬 Cloudflare 靜態網站：去副檔名轉址、套用 _headers。"""
 
     def log_message(self, *args):
         pass
@@ -105,6 +105,15 @@ def check(cond, msg):
     print('  ✓', msg)
 
 
+def wait_until(page, js, arg=None, timeout=15):
+    # 不用 page.wait_for_function：它在 https 頁面會被網站的 CSP（禁止 eval）擋下
+    for _ in range(timeout * 10):
+        if page.evaluate(js, arg):
+            return
+        page.wait_for_timeout(100)
+    raise AssertionError('timeout: ' + js)
+
+
 def cache_state(page):
     return page.evaluate("""async () => {
         const names = (await caches.keys()).filter(n => n.startsWith('learn-japanese-'));
@@ -138,7 +147,7 @@ def main():
         server = serve(v1, port)
         page.goto(base + '/')
         page.evaluate('window.__sameDoc = true')
-        page.wait_for_function("document.getElementById('offline-status').textContent.includes('已可離線')")
+        wait_until(page, "() => document.getElementById('offline-status').textContent.includes('已可離線')")
         check(True, '顯示「已可離線使用」')
         state = cache_state(page)
         check(len(state['names']) == 1 and state['sizes'] == [10], f'預先快取 10 個檔案 {state}')
@@ -153,7 +162,7 @@ def main():
         page.reload()
         check(page.locator('h1').inner_text() == '五十音學習工具', '首頁重新整理可開啟')
         page.goto(base + '/kana-trainer.html')
-        page.wait_for_function("document.getElementById('q-body').innerHTML.length > 0")
+        wait_until(page, "() => document.getElementById('q-body').innerHTML.length > 0")
         check(True, '練習頁可開啟並出題')
         before = page.evaluate("localStorage.getItem('kana-trainer-v1')")
         if page.evaluate("S.q.type") == 'input':
@@ -163,11 +172,11 @@ def main():
         else:
             page.keyboard.press('1')
         # save() 有 200ms 防抖，等它寫進 localStorage
-        page.wait_for_function("b => localStorage.getItem('kana-trainer-v1') !== b", arg=before)
+        wait_until(page, "b => localStorage.getItem('kana-trainer-v1') !== b", before)
         stats = json.loads(page.evaluate("localStorage.getItem('kana-trainer-v1')"))['stats']
         check(len(stats) > 0, '離線作答會記錄進度')
         page.reload()
-        page.wait_for_function("document.getElementById('q-body').innerHTML.length > 0")
+        wait_until(page, "() => document.getElementById('q-body').innerHTML.length > 0")
         kept = json.loads(page.evaluate("localStorage.getItem('kana-trainer-v1')"))['stats']
         check(kept == stats, '重新整理後進度還在')
         titles = {'/kana-trainer': '50音練習', '/table.html?x=1': '五十音練習帳', '/index.html': '五十音學習工具',
